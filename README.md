@@ -1,12 +1,28 @@
 # Template
-Template for a BMAT-Apps
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas porta laoreet diam non bibendum. Aenean dignissim pretium neque vel ullamcorper. Cras consectetur bibendum quam et aliquet. Quisque in sapien in neque finibus elementum non sed mauris. Donec a tellus quis mauris viverra ultricies id et velit. Ut vel dictum dui. Pellentesque non urna dapibus, sollicitudin lectus vitae, ultricies risus. Sed porttitor velit id nunc egestas vestibulum. Fusce eleifend, mi nec rutrum suscipit, dui quam placerat elit, ultricies auctor sem tortor quis lectus. Nulla fermentum ipsum in feugiat laoreet. In quis ligula eros. Proin sed varius purus. Praesent malesuada nulla est, eget porttitor lacus sodales vel. Fusce eget odio pellentesque, porta dui sed, elementum tellus.
+This repository is a template to create a BMAT-Apps. 
 
-## Test
+## Requirement
 
-Aliquam ullamcorper lacus id lobortis tempus. Donec dapibus porttitor aliquam. Nulla elementum leo ac finibus consequat. Duis mollis felis lorem, ut mollis augue luctus at. Fusce tincidunt turpis rhoncus bibendum ultrices. Donec eget ex at elit condimentum gravida a ac enim. Sed eu lacus condimentum tortor facilisis porttitor. Cras ut ullamcorper felis, in elementum tortor. Aliquam suscipit suscipit aliquet.
+Here is a list of mandatory required files and folders that needs to be found in a BMAT-Apps:
 
-Donec eros tortor, mattis dictum congue at, ullamcorper a mi. Sed eget tincidunt velit. Ut mi neque, aliquet eu tempor vitae, rutrum id nunc. Praesent rhoncus auctor facilisis. Nam suscipit suscipit justo sed blandit. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Aenean convallis felis turpis, in sagittis metus dictum quis. Sed vitae mauris tortor. Aliquam vel dolor commodo, fermentum nisl id, imperdiet justo. Duis eu urna in ipsum porta auctor. Cras pulvinar tortor nunc, quis commodo turpis euismod at. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris pulvinar quis justo ut mollis. Suspendisse potenti. Etiam fringilla mauris pulvinar, sollicitudin lorem vel, sollicitudin leo.
+* src/ folder: this folder contains the source code of the pipeline. The user must add its source code in python containing a dedicated graphical interface using PyQt5 and the computation code, as well as an associated JSON file containing metainformation about the pipeline. The python source code must contain a *launch* function to launch the graphical interface. The JSON file must be written in a dictionary-like structure and contain the following pieces of information:
+   * "name”: the name of the Pipeline that will be displayed in the ‘Pipelines’ drop-down menu in the software.
+   * “source_code”: the name of the python file containing the source code for the graphical interface of the pipeline. This file needs to be implemented using PyQt5 python module and contain a *launch* function, that takes the Main Window of the software and the "add_info" dictionary as arguments, and that launches the graphical interface of the Pipeline. User can take the Template pipeline as an example.
+   * “import_name”: the name of the corresponding module that needs to be imported in python. It corresponds to the name of the python source code file without the ‘.py’ extension.
+   * “attr”: the name of the attribute of the imported ‘Pipelines’ python module corresponding to the python source code of the pipeline. Again, this corresponds to the name of the python source code file without the ‘.py’ extension.
+   * "add_info": this contains a dictionnary containing some specific information that the pipeline needs to run (e.g. the name of a sequence to use).
 
-Integer dapibus, ipsum vestibulum vestibulum viverra, sapien purus faucibus nisl, eu molestie quam magna non ex. Proin ligula tortor, auctor ut velit eget, porta vehicula justo. In auctor, tortor et commodo tincidunt, ante lacus imperdiet leo, in porta magna velit eget dolor. Ut orci quam, molestie at enim non, posuere porta lorem. Curabitur ultricies fringilla mollis. Cras eleifend, nisi in varius sodales, velit nisl lacinia nisi, non pulvinar neque nisi euismod turpis. Integer sed feugiat eros, id fringilla lacus. In hac habitasse platea dictumst. Aenean at ligula eu ex dignissim aliquet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce at enim et nisi vestibulum finibus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Morbi semper urna vel metus efficitur, in luctus leo laoreet. Donec tincidunt ullamcorper purus porttitor eleifend. Proin porta sapien vitae lorem porta, vitae mollis dolor laoreet. 
+* *Readme.md* file: this file contain the documentation of the pipeline and explain how to use the pipeline with other useful information
+
+* *requirements.txt* file: this file contains all the python packages required to be installed for the pipeline to work properly
+
+* *setup.json* file: this file contains information for the BMAT software in order to be able to install the pipeline properly. More specifically, this JSON file must be written in a dictionary-like structure and contain the following pieces of information:
+   * "python_requirements": contains the name of the *requirements* file containing a list of every required python packages that needs to be installed for the pipeline to work properly ("requirements.txt" by default).
+   * "docker": this key contains a dictionary with information about the installation of the docker container used by the pipeline (if the pipeline uses a docker container, otherwise the keys of this container is put to null). the dictionary must contain these keys:
+       * "docker": name of the docker image to pull | "Dockerfile" to build the image from a Dockerfile (in that case, a Dockerfile is needed in the repository) | *null* if the pipeline does not use a docker image.
+       * "tag": new name of the docker image if the user want to rename the docker image that he pulled (this is required with "Dockerfile" option to name the built docker container)
+
+The easiest way to implement a new BMAT-App is to fork this Template BMAT-App which already contain the right structure.
+
+

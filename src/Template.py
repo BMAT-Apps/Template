@@ -48,18 +48,7 @@ from PyQt5.QtWidgets import (QDesktopWidget,
                              QCheckBox)
 from PyQt5.QtGui import (QFont,
                          QIcon)
-import traceback
-import threading
-import subprocess
-import pandas as pd
-import platform
-import json
-from bids_validator import BIDSValidator
-import time
 
-
-# from my_logging import setup_logging
-from tqdm.auto import tqdm
 
 
 def launch(parent, add_info=None):
@@ -229,7 +218,6 @@ class ActionWorker(QObject):
         """
         # Action
         print('Beginning of the action')
-        time.sleep(10)
         print('End of the action')
         self.finished.emit()
 
