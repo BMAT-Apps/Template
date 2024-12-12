@@ -22,7 +22,8 @@ from PyQt5.QtCore import (QSize,
                           QThread,
                           pyqtSignal,
                           QRunnable,
-                          QThreadPool)
+                          QThreadPool,
+                          QEvent)
 from PyQt5.QtWidgets import (QDesktopWidget,
                              QApplication,
                              QWidget,
@@ -45,9 +46,12 @@ from PyQt5.QtWidgets import (QDesktopWidget,
                              QMenu,
                              QAction,
                              QTabWidget,
-                             QCheckBox)
+                             QCheckBox, 
+                             QTextBrowser,
+                             QToolBar)
 from PyQt5.QtGui import (QFont,
                          QIcon)
+import markdown
 
 
 
@@ -102,6 +106,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.window)
         self.center()
         
+        # Create a toolbar and add it to the main window
+        self.toolbar = QToolBar("Help?")
+        self.addToolBar(self.toolbar)
+
+        # Create a Help action and add it to the toolbar
+        help_action = QAction("Help", self)
+        help_action.triggered.connect(self.show_help)
+        self.toolbar.addAction(help_action)
+        
         self.tab = TemplateTab(self)
         layout = QVBoxLayout()
         layout.addWidget(self.tab)
@@ -122,6 +135,44 @@ class MainWindow(QMainWindow):
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+        
+        
+    def event(self, event):
+        # Override the help button event
+        if event.type() == QEvent.NonClientAreaMouseButtonPress:
+            if self.windowFlags() & Qt.WindowContextHelpButtonHint:
+                self.show_help()
+                return True
+        return super().event(event)
+
+    def show_help(self):
+        # Open the help window with the Markdown file
+        markdown_path = pjoin(os.path.dirname(__file__), "..", "README.md")
+        if pexists(markdown_path):
+            self.help_window = HelpWindow(markdown_path)
+            self.help_window.show()
+        else:
+            print('Readme not found')
+        
+
+class HelpWindow(QWidget):
+    def __init__(self, markdown_file):
+        super().__init__()
+        self.setWindowTitle("Help")
+        self.resize(600, 400)
+
+        # Load and convert markdown to HTML
+        with open(markdown_file, 'r') as file:
+            markdown_content = file.read()
+        html_content = markdown.markdown(markdown_content)
+
+        # Setup QTextBrowser to display the HTML content
+        self.text_browser = QTextBrowser()
+        self.text_browser.setHtml(html_content)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.text_browser)
+        self.setLayout(layout)
 
 
 
