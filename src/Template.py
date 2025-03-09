@@ -22,7 +22,7 @@ from PyQt5.QtCore import (QSize,
                           QThread,
                           pyqtSignal,
                           QRunnable,
-                          QThreadPool,
+                          QThreadPool, 
                           QEvent)
 from PyQt5.QtWidgets import (QDesktopWidget,
                              QApplication,
@@ -46,12 +46,17 @@ from PyQt5.QtWidgets import (QDesktopWidget,
                              QMenu,
                              QAction,
                              QTabWidget,
-                             QCheckBox, 
+                             QCheckBox,
+                             QInputDialog,
                              QTextBrowser,
                              QToolBar)
 from PyQt5.QtGui import (QFont,
                          QIcon)
 import markdown
+import json
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bids_Template import bids_Template, find_subjects_and_sessions
+import time
 
 
 
@@ -109,15 +114,45 @@ class MainWindow(QMainWindow):
         # Create a toolbar and add it to the main window
         self.toolbar = QToolBar("Help?")
         self.addToolBar(self.toolbar)
+        
+        # Create an action
+        help_action = QAction("Help?", self)
+        help_action.triggered.connect(self.show_help)  # Connect to function
 
-        # Create a Help action and add it to the toolbar
-        help_action = QAction("Help", self)
-        help_action.triggered.connect(self.show_help)
+        # Add action to the toolbar
         self.toolbar.addAction(help_action)
         
-        self.tab = TemplateTab(self)
-        layout = QVBoxLayout()
-        layout.addWidget(self.tab)
+        self.pipeline = "Template"
+        
+        sss_slurm = self.add_info.get('sss_slurm')
+        
+        if sss_slurm == None:
+            print('no sss slurm')
+            self.tab = TemplateTab(self, sss_slurm)
+            layout = QVBoxLayout()
+            layout.addWidget(self.tab)
+            
+        else:
+            # get job_info
+            path = os.path.dirname(os.path.abspath(__file__))
+            
+            if not pexists(pjoin(path, sss_slurm)):
+                print('[ERROR] sss_slurm json file not found')
+            
+            self.job_json = None
+            with open(pjoin(path, sss_slurm), 'r') as f:
+                self.job_json = json.load(f)
+            
+            self.tabs = QTabWidget(self)
+            
+            self.main_tab = TemplateTab(self, sss_slurm)
+            self.job_tab = JobTab(self, self.job_json["slurm_infos"])
+            
+            self.tabs.addTab(self.main_tab, "Main")
+            self.tabs.addTab(self.job_tab, "Slurm Job")
+            
+            layout = QVBoxLayout()
+            layout.addWidget(self.tabs)
 
         self.window.setLayout(layout)
 
@@ -153,8 +188,8 @@ class MainWindow(QMainWindow):
             self.help_window.show()
         else:
             print('Readme not found')
-        
-
+            
+            
 class HelpWindow(QWidget):
     def __init__(self, markdown_file):
         super().__init__()
@@ -184,7 +219,7 @@ class TemplateTab(QWidget):
     """
     
 
-    def __init__(self, parent):
+    def __init__(self, parent, sss_slurm=None):
         """
         
 
@@ -201,9 +236,24 @@ class TemplateTab(QWidget):
         super().__init__()
         self.parent = parent
         self.bids = self.parent.bids
+        self.bmat_path = self.parent.parent.bmat_path
         self.setMinimumSize(500, 200)
         
+        self.pipeline = self.parent.pipeline
+        
+        self.local = sss_slurm == None
+        
+        if not self.local:
+            self.job_json = self.parent.job_json
+        
         self.label = QLabel("This is a Template Pipeline")
+        
+        # self.subjects_input = QLineEdit(self)
+        # self.subjects_input.setPlaceholderText("Select subjects")
+
+        # self.sessions_input = QLineEdit(self)
+        # self.sessions_input.setPlaceholderText("Select sessions")
+        
         self.button = QPushButton("Pipeline Action")
         self.button.clicked.connect(self.action)
         
@@ -223,16 +273,165 @@ class TemplateTab(QWidget):
         None.
 
         """
-        self.thread = QThread()
-        self.action = ActionWorker()
-        self.action.moveToThread(self.thread)
-        self.thread.started.connect(self.action.run)
-        self.action.finished.connect(self.thread.quit)
-        self.action.finished.connect(self.action.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.start()
         
-        self.parent.hide()
+        # select sub and ses to run
+        # sub = self.subjects_input.text()
+        # ses = self.sessions_input.text()
+        sub = '001'
+        ses = '01'
+        
+        args = []
+        
+        if self.local:
+            self.thread = QThread()
+            self.action = ActionWorker(self.bids.root_dir, sub, ses, self.pipeline)
+            self.action.moveToThread(self.thread)
+            self.thread.started.connect(self.action.run)
+            self.action.in_progress.connect(self.is_in_progress)
+            self.action.finished.connect(self.thread.quit)
+            self.action.finished.connect(self.action.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+            self.thread.start()
+        
+            self.parent.hide()
+            
+        else:
+            self.job_json["slurm_infos"] = self.parent.job_tab.get_slurm_job_info()
+            if self.job_json["slurm_infos"]["use_local"]:
+                self.local = True
+                self.action()
+                return
+            
+            else:
+                self.job_json["slurm_infos"].pop("use_local")
+            
+            # Import the submit_job_sss
+            sys.path.insert(0, self.bmat_path)
+            submit_job_sss = __import__('submit_job_sss')
+            submit_job = submit_job_sss.submit_job
+            sys.path.pop(0)
+            
+            # Do action
+            def getPassword():
+                password, ok = QInputDialog.getText(self, "SSH Key Passphrase", "Unlocking SSH key with passphrase?", 
+                                        QLineEdit.Password)
+                passphrase = None
+                if ok and password:
+                    passphrase = password
+                return passphrase
+            
+            passphrase = getPassword()
+            
+            # Do the job here and not in a thread 
+            self.is_in_progress(('Template', True))
+            jobs_submitted = []
+                
+            try:
+                job_id = submit_job(self.bids.root_dir, sub, ses, self.job_json, args=args, use_asyncssh=True, passphrase=passphrase, one_job=False)
+                # job_id = ['Submitted batch job 2447621']
+                if job_id is not None and job_id != []:
+                    if type(job_id) is list:
+                        jobs_submitted.extend(job_id)
+                    else:
+                        jobs_submitted.append(job_id)
+
+            except Exception as e:
+                self.error_handler(e)
+            
+            self.is_in_progress(('Template', False))
+            self.submitted_jobs(jobs_submitted)
+            
+    def is_in_progress(self, in_progress):
+        self.parent.parent.work_in_progress.update_work_in_progress(in_progress)
+        
+    
+    def error_handler(self, exception):
+        QMessageBox.critical(self, type(exception).__name__, str(exception))
+        
+    def submitted_jobs(self, jobs_id):
+        print('submitted jobs')
+        class SubmittedJobsDialog(QDialog):
+            def __init__(self, results, parent=None):
+                super().__init__()
+        
+                self.setWindowTitle('Jobs Submitted')
+                self.setGeometry(300, 300, 400, 300)
+                
+                layout = QVBoxLayout(self)
+                
+                # Create and populate the QListWidget
+                self.listWidget = QListWidget(self)
+                for result in results:
+                    self.listWidget.addItem(result)
+                
+                layout.addWidget(self.listWidget)
+        
+                # Create OK button
+                self.okButton = QPushButton('OK', self)
+                self.okButton.clicked.connect(self.accept)
+                
+                # Add OK button to layout
+                buttonLayout = QHBoxLayout()
+                buttonLayout.addStretch()
+                buttonLayout.addWidget(self.okButton)
+                
+                layout.addLayout(buttonLayout)
+                
+        job_dialog = SubmittedJobsDialog(jobs_id)
+        # job_submitted_window = QMainWindow()
+        # job_submitted_window.setCentralWidget(job_dialog)
+        job_dialog.exec_()
+        
+        
+
+class JobTab(QWidget):
+    """
+    """
+    
+    def __init__(self, parent, slurm_infos):
+        """
+        
+
+        Returns
+        -------
+        None.
+
+        """
+        super().__init__()
+        
+        self.parent = parent
+        self.bids = self.parent.bids
+        self.slurm_info = slurm_infos
+        self.setMinimumSize(500, 200)
+        
+        self.use_local_check = QCheckBox('Use local instead of server pipeline')
+        
+        self.slurm_info_input = {}
+        layout = QVBoxLayout()
+        layout.addWidget(self.use_local_check)
+        for key in self.slurm_info.keys():
+            key_label = QLabel(key)
+            key_input = QLineEdit(self)
+            key_input.setPlaceholderText(self.slurm_info[key])
+            key_layout = QHBoxLayout()
+            self.slurm_info_input[f'{key}_input'] = key_input
+            key_layout.addWidget(key_label)
+            key_layout.addWidget(key_input)
+            layout.addLayout(key_layout)
+            
+        self.setLayout(layout)
+            
+            
+    def get_slurm_job_info(self):
+        use_local = self.use_local_check.isChecked()
+        slurm_job_info = {"use_local":use_local}
+        for key in self.slurm_info.keys():
+            key_text = self.slurm_info_input[f'{key}_input'].text()
+            if key_text == None or key_text == "":
+                key_text = self.slurm_info_input[f'{key}_input'].placeholderText()
+                
+            slurm_job_info[key] = key_text
+        return slurm_job_info
 
 
 
@@ -244,9 +443,10 @@ class ActionWorker(QObject):
     """
     finished = pyqtSignal()
     progress = pyqtSignal(int)
+    in_progress = pyqtSignal(tuple)
     
 
-    def __init__(self):
+    def __init__(self, bids, sub, ses, pipeline):
         """
         
 
@@ -256,6 +456,11 @@ class ActionWorker(QObject):
 
         """
         super().__init__()
+        
+        self.bids = bids
+        self.sub = sub
+        self.ses = ses
+        self.pipeline = pipeline
         
 
     def run(self):
@@ -267,9 +472,18 @@ class ActionWorker(QObject):
         None.
 
         """
+        self.in_progress.emit((self.pipeline, True))
         # Action
         print('Beginning of the action')
+        subjects_and_sessions = find_subjects_and_sessions(self.bids, self.sub, self.ses)
+        
+        for sub, sess in subjects_and_sessions:
+            for ses in sess:
+        
+                bids_Template('bruh', 'a', 'b')
+                
         print('End of the action')
+        self.in_progress.emit((self.pipeline, False))
         self.finished.emit()
 
 

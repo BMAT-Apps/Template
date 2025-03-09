@@ -3,5 +3,5 @@
 	"source_code": "Template.py",
 	"import_name": "Template",
 	"attr": "Template",
-	"add_info":{}
+	"add_info":{"use_docker":false, "sss_slurm_no":"Template_sss.json"}
 }

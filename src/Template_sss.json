@@ -1,0 +1,17 @@
+{
+	"python_script":"/storage/platform/ions/nima/Programs/BMAT/Pipelines/Template/bids_Template.py",
+	"venv":"/storage/platform/ions/nima/Programs/BMAT/Pipelines/Template/.venv/bmat-env/bin/activate",
+	"log":"/storage/platform/ions/nima/Programs/BMAT/Pipelines/Template/logs",
+	"modules":["Python/3.10"],
+	"slurm_infos":{
+		"job-name":"bids_Template",
+		"nodes":"1",
+		"ntasks":"1",
+		"cpus-per-task":"1",
+		"mem-per-cpu":"8192",
+		"time":"00:30:00",
+		"mail-type":"FAIL",
+		"mail-user":"colin.vandenbulcke@uclouvain.be"
+	},
+	"args":{}
+}

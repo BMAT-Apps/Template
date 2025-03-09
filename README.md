@@ -11,8 +11,9 @@ Here is a list of mandatory required files and folders that need to be found in 
    * “source_code”: the name of the python file containing the source code for the graphical interface of the pipeline. This file needs to be implemented using PyQt5 python module and contain a *launch* function, that takes the Main Window of the software and the "add_info" dictionary as arguments, and that launches the graphical interface of the Pipeline. User can take the Template pipeline as an example.
    * “import_name”: the name of the corresponding module that needs to be imported in python. It corresponds to the name of the python source code file without the ‘.py’ extension.
    * “attr”: the name of the attribute of the imported ‘Pipelines’ python module corresponding to the python source code of the pipeline. Again, this corresponds to the name of the python source code file without the ‘.py’ extension.
-   * "add_info": this contains a dictionnary containing some specific information that the pipeline needs to run (e.g. the name of a sequence to use).
-
+   * "add_info": this contains a dictionnary containing some specific information that the pipeline needs to run (e.g. the name of a sequence to use). In add_info, you can add some specific tags to tell BMAT to run the pipeline with docker or on the SSS server (for UCLouvain members):
+      * "use_dowker": run the pipeline using docker
+      * "sss_slurm": path towards a config file to run the pipeline with slurm on remote server	
 * *Readme.md* file: this file contains the documentation of the pipeline and explain how to use the pipeline with other useful information.
 
 * *requirements.txt* file: this file contains all the python packages required to be installed for the pipeline to work properly.
