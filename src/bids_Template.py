@@ -19,7 +19,7 @@ def bids_Template(bids, sub, ses):
     time.sleep(10)
 
 
-def get_session_list(bids, subj, ses_details):
+def get_session_list(bids, subj, ses_details, check_if_exist=True):
     """Helper function to get the list of sessions for a given subject."""
     sess = []
     if ses_details == 'all':
@@ -32,26 +32,34 @@ def get_session_list(bids, subj, ses_details):
                 s0, s1 = map(int, s.split('-'))
                 for si in range(s0, s1 + 1):
                     si_str = str(si).zfill(2)
-                    if os.path.isdir(pjoin(bids, f'sub-{subj}', f'ses-{si_str}')):
+                    if check_if_exist:
+                        if os.path.isdir(pjoin(bids, f'sub-{subj}', f'ses-{si_str}')):
+                            sess.append(si_str)
+                    else:
                         sess.append(si_str)
+                        
             else:
-                if os.path.isdir(pjoin(bids, f'sub-{subj}', f'ses-{s}')):
+                if check_if_exist:
+                    if os.path.isdir(pjoin(bids, f'sub-{subj}', f'ses-{s}')):
+                        sess.append(s)
+                else:
                     sess.append(s)
     return sess
 
-def process_subject_range(bids, sub_range, ses_details):
+def process_subject_range(bids, sub_range, ses_details, check_if_exist=True):
     """Helper function to process a range of subjects."""
     subjects_and_sessions = []
     sub0, sub1 = map(int, sub_range.split('-'))
     for subi in range(sub0, sub1 + 1):
         subi_str = str(subi).zfill(3)
-        if not os.path.isdir(pjoin(bids, f'sub-{subi_str}')):
+        if not os.path.isdir(pjoin(bids, f'sub-{subi_str}')) and check_if_exist:
             continue
-        sess = get_session_list(bids, subi_str, ses_details)
+        sess = get_session_list(bids, subi_str, ses_details, check_if_exist=check_if_exist)
         subjects_and_sessions.append((subi_str, sess))
     return subjects_and_sessions
 
-def find_subjects_and_sessions(bids, sub, ses):
+def find_subjects_and_sessions(bids, sub, ses, check_if_exist=True):
+    
     subjects_and_sessions = []
 
     if sub == 'all':
@@ -65,14 +73,36 @@ def find_subjects_and_sessions(bids, sub, ses):
         # Process specified subjects
         for sub_item in sub.split(','):
             if '-' in sub_item:
-                subjects_and_sessions.extend(process_subject_range(bids, sub_item, ses))
+                subjects_and_sessions.extend(process_subject_range(bids, sub_item, ses, check_if_exist=check_if_exist))
             else:
-                if not os.path.isdir(pjoin(bids, f'sub-{sub_item}')):
+                if not os.path.isdir(pjoin(bids, f'sub-{sub_item}')) and check_if_exist:
                     continue
-                sess = get_session_list(bids, sub_item, ses)
+                sess = get_session_list(bids, sub_item, ses, check_if_exist=check_if_exist)
                 subjects_and_sessions.append((sub_item, sess))
     
     return sorted(subjects_and_sessions)
+
+def find_subs(bids, sub, check_if_exist=True):
+    subs = []
+    if sub == 'all':
+        for dirs in os.listdir(bids):
+            if dirs.startswith('sub-'):
+                subj = dirs.split('-')[1]
+                subs.append(subj)
+    else:
+        for sub_item in sub.split(','):
+            if '-' in sub_item:
+                sub0, sub1 = map(int, sub_item.split('-'))
+                for subi in range(sub0, sub1 + 1):
+                    subi_str = str(subi).zfill(3)
+                    if not os.path.isdir(pjoin(bids, f'sub-{subi_str}')) and check_if_exist:
+                        continue
+                    subs.append(subi_str)
+            else:
+                if not os.path.isdir(pjoin(bids, f'sub-{sub_item}')) and check_if_exist:
+                    continue
+                subs.append(sub_item)
+    return subs
     
 
 
